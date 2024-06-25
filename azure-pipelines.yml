@@ -1,19 +1,21 @@
 trigger:
-- master
+- main
 
 pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  MAVEN_OPTS: "-Xmx1024m"
-  JAVA_HOME: "/usr/lib/jvm/java-11-openjdk-amd64"
-  SPRING_PROFILES_ACTIVE: "prod"
+  SPRING_PROFILES_ACTIVE: 'prod'
 
 stages:
 - stage: Build
   jobs:
   - job: Build
     steps:
+    - task: JavaToolInstaller@0
+      inputs:
+        versionSpec: '11'
+        jdkArchitectureOption: 'x64'
     - task: Maven@3
       inputs:
         mavenPomFile: 'pom.xml'
@@ -22,8 +24,8 @@ stages:
         mavenOptions: '-Xmx1024m'
         publishJUnitResults: true
         testResultsFiles: '**/surefire-reports/TEST-*.xml'
-        javaHomeOption: 'JDKVersion'
-        jdkVersionOption: '1.11'
+        javaHomeOption: 'Path'
+        jdkDirectory: '$(JAVA_HOME_11_X64)'
         mavenVersionOption: 'Default'
         mavenAuthenticateFeed: true
 
@@ -32,6 +34,10 @@ stages:
   jobs:
   - job: Test
     steps:
+    - task: JavaToolInstaller@0
+      inputs:
+        versionSpec: '11'
+        jdkArchitectureOption: 'x64'
     - script: |
         mvn test
       displayName: 'Run tests'
@@ -45,6 +51,10 @@ stages:
       runOnce:
         deploy:
           steps:
+          - task: JavaToolInstaller@0
+            inputs:
+              versionSpec: '11'
+              jdkArchitectureOption: 'x64'
           - script: |
               mvn spring-boot:run
             displayName: 'Deploy Spring Boot Application'
