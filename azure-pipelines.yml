@@ -1,29 +1,50 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
 - master
+
 pool:
-  vmImage: windows-latest
-steps:
-- task: Maven@3
-  inputs:
-    mavenPomFile: 'pom.xml'
-    mavenOptions: '-Xmx3072m'
-    javaHomeOption: 'JDKVersion'
-    jdkVersionOption: '1.11'
-    jdkArchitectureOption: 'x64'
-    publishJUnitResults: true
-    testResultsFiles: '**/surefire-reports/TEST-*.xml'
-    goals: 'package'
-- task: CopyFiles@2
-  inputs:
-    Contents: '**/*.war'
-    TargetFolder: '$(build.artifactstagingdirectory)'
-- task: PublishBuildArtifacts@1
-  inputs:
-    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-    ArtifactName: 'warfile'
-    publishLocation: 'Container'
+  vmImage: 'ubuntu-latest'
+
+variables:
+  MAVEN_OPTS: "-Xmx1024m"
+  JAVA_HOME: "/usr/lib/jvm/java-11-openjdk-amd64"
+  SPRING_PROFILES_ACTIVE: "prod"
+
+stages:
+- stage: Build
+  jobs:
+  - job: Build
+    steps:
+    - task: Maven@3
+      inputs:
+        mavenPomFile: 'pom.xml'
+        goals: 'clean package'
+        options: '--batch-mode'
+        mavenOptions: '-Xmx1024m'
+        publishJUnitResults: true
+        testResultsFiles: '**/surefire-reports/TEST-*.xml'
+        javaHomeOption: 'JDKVersion'
+        jdkVersionOption: '1.11'
+        mavenVersionOption: 'Default'
+        mavenAuthenticateFeed: true
+
+- stage: Test
+  dependsOn: Build
+  jobs:
+  - job: Test
+    steps:
+    - script: |
+        mvn test
+      displayName: 'Run tests'
+
+- stage: Deploy
+  dependsOn: Test
+  jobs:
+  - deployment: Deploy
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - script: |
+              mvn spring-boot:run
+            displayName: 'Deploy Spring Boot Application'
