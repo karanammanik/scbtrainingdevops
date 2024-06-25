@@ -5,17 +5,21 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  SPRING_PROFILES_ACTIVE: 'prod'
+  MAVEN_OPTS: "-Xmx1024m"
+  JAVA_HOME: "/usr/lib/jvm/java-11-openjdk-amd64"
+  SPRING_PROFILES_ACTIVE: "prod"
 
 stages:
 - stage: Build
   jobs:
   - job: Build
     steps:
-    - task: JavaToolInstaller@0
-      inputs:
-        versionSpec: '11'
-        jdkArchitectureOption: 'x64'
+    - script: |
+        echo "Setting up Java environment"
+        sudo apt-get update
+        sudo apt-get install -y openjdk-11-jdk
+      displayName: 'Install Java 11'
+    
     - task: Maven@3
       inputs:
         mavenPomFile: 'pom.xml'
@@ -25,7 +29,7 @@ stages:
         publishJUnitResults: true
         testResultsFiles: '**/surefire-reports/TEST-*.xml'
         javaHomeOption: 'Path'
-        jdkDirectory: '$(JAVA_HOME_11_X64)'
+        jdkDirectory: '$(JAVA_HOME)'
         mavenVersionOption: 'Default'
         mavenAuthenticateFeed: true
 
@@ -34,10 +38,12 @@ stages:
   jobs:
   - job: Test
     steps:
-    - task: JavaToolInstaller@0
-      inputs:
-        versionSpec: '11'
-        jdkArchitectureOption: 'x64'
+    - script: |
+        echo "Setting up Java environment"
+        sudo apt-get update
+        sudo apt-get install -y openjdk-11-jdk
+      displayName: 'Install Java 11'
+
     - script: |
         mvn test
       displayName: 'Run tests'
@@ -51,10 +57,12 @@ stages:
       runOnce:
         deploy:
           steps:
-          - task: JavaToolInstaller@0
-            inputs:
-              versionSpec: '11'
-              jdkArchitectureOption: 'x64'
+          - script: |
+              echo "Setting up Java environment"
+              sudo apt-get update
+              sudo apt-get install -y openjdk-11-jdk
+            displayName: 'Install Java 11'
+            
           - script: |
               mvn spring-boot:run
             displayName: 'Deploy Spring Boot Application'
